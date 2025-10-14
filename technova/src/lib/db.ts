@@ -14,3 +14,5 @@ export const dbConnect = async () => {
     console.error("Error al conectar:", error);
   }
 };
+
+export default dbConnect;

@@ -1,18 +1,42 @@
+import { Schema, model, models } from "mongoose";
 
-import mongoose, { Schema, model, models } from "mongoose";
-
-const ProductSchema = new Schema(
+const productSchema = new Schema(
   {
-    sku: { type: String, required: true, unique: true },
-    name: { type: String, required: true },
-    brand: { type: String, required: true },
-    category: { type: String, required: true },
-    price: { type: Number, required: true },
-    quantity: { type: Number, required: true },
-    isActive: { type: Boolean, default: true },
-    imageUrl: { type: String, default: "" },
+    name: {
+      type: String,
+      required: true,
+    },
+    brand: {
+      type: String,
+      required: true,
+    },
+    quantity: {
+      type: Number,
+      required: true,
+    },
+    price: {
+      type: Number,
+      required: true,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    category: {
+      type: String,
+      required: true,
+    },
+    imageUrl: {
+      type: String,
+      default: "",
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true, // ✅ crea automáticamente createdAt y updatedAt
+  }
 );
 
-export const Product = models.Product || model("product", ProductSchema);
+// ✅ Usa el helper de Next.js / Mongoose para evitar recompilar modelos
+const Products = models.Products || model("Products", productSchema);
+
+export default Products;

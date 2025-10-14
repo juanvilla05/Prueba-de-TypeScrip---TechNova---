@@ -1,6 +1,5 @@
-export interface IProduct {
+export interface Product {
     _id?: string;
-    sku: string;
     name: string;
     brand: string;
     category: string;
@@ -11,3 +10,9 @@ export interface IProduct {
     createdAt?: string;
     updatedAt?: string;
   }
+
+  export interface ApiResponse<T> {
+    ok?:boolean;
+    data?:T;
+    error?:string;
+}

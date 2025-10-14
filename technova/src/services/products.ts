@@ -1,51 +1,64 @@
-import type { NextApiRequest, NextApiResponse } from "next";
-import { IProduct } from "@/interfaces/product";
-import { Product } from "@/models/Product";
-import { dbConnect } from "@/lib/db";
+import { ApiResponse, Product } from "@/interfaces/product";
+import axios from "axios";
 
 
+const API_URL = "/api/products";
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  await dbConnect();
-
-  switch (req.method) {
-    case "GET":
-      try {
-        const products: IProduct[] = await Product.find();
-        return res.status(200).json(products);
-      } catch (error) {
-        return res.status(500).json({ error: "Error al obtener productos" });
-      }
-
-    case "POST":
-      try {
-        const existing = await Product.findOne({ sku: req.body.sku });
-        if (existing) return res.status(400).json({ error: "SKU duplicado" });
-
-        const newProduct = await Product.create(req.body);
-        return res.status(201).json(newProduct);
-      } catch (error) {
-        return res.status(400).json({ error: "Error al crear producto" });
-      }
-
-    case "PUT":
-      try {
-        const updatedProduct = await Product.findByIdAndUpdate(req.body._id, req.body, { new: true });
-        return res.status(200).json(updatedProduct);
-      } catch (error) {
-        return res.status(400).json({ error: "Error al actualizar producto" });
-      }
-
-    case "DELETE":
-      try {
-        const { id } = req.query;
-        await Product.findByIdAndDelete(id);
-        return res.status(200).json({ message: "Producto eliminado" });
-      } catch (error) {
-        return res.status(400).json({ error: "Error al eliminar producto" });
-      }
-
-    default:
-      return res.status(405).json({ message: "Método no permitido" });
+export const getProducts = async (): Promise<ApiResponse<Product[]>> => {
+  try {
+    const response = await axios.get<ApiResponse<Product[]>>(API_URL);
+    return response.data; // asumiendo que tu API ya responde con ApiResponse<Product[]>
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      // si tu API manda { error: string } en body, intenta leerlo
+      const apiErr = (error.response?.data as { error?: string })?.error;
+      return { error: apiErr ?? "Error en la solicitud" };
+    }
+    return { error: "Error desconocido" };
   }
-}
+};
+
+/* ==========================
+   POST - Crear producto
+   ========================== */
+export const createProduct = async (product: Omit<Product, "_id">): Promise<ApiResponse<Product>> => {
+  try {
+    const response = await axios.post(API_URL, product);
+    return response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      return { error: "Error al crear producto" };
+    }
+    return { error: "Error desconocido" };
+  }
+};
+
+/* ==========================
+   PUT - Actualizar producto
+   ========================== */
+export const updateProduct = async (product: Product, _id: string): Promise<ApiResponse<Product>> => {
+  try {
+    const response = await axios.put(`${API_URL}?id=${_id}`, product);
+    return response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      return { error: "Error al actualizar prodcuto" };
+    }
+    return { error: "Error desconocido" };
+  }
+};
+
+/* ==========================
+   DELETE - Eliminar producto
+   ========================== */
+export const deleteProduct = async (_id: string): Promise<ApiResponse<Product>> => {
+  try {
+    const response = await axios.delete(`${API_URL}?id=${_id}`);
+    return response.data;
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error)) {
+      return { error: "Error al eliminar producto" };
+    }
+    return { error: "Error desconocido" };
+  }
+};

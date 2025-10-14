@@ -1,50 +1,122 @@
+// Next.js API route support: https://nextjs.org/docs/api-routes/introduction
+import { Product } from "@/interfaces/product";
+import dbConnection from "@/lib/db";
+import Products from "@/models/Product";
 import type { NextApiRequest, NextApiResponse } from "next";
-import { dbConnect } from "@/lib/db";
-import { Product } from "@/models/Product";
-import { IProduct } from "@/interfaces/product";
 
+export type ProductResponse =
+  | { ok: true; data: Product[] }
+  | { ok: false; error: string };
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  await dbConnect();
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse<ProductResponse>
+) {
+  try {
+    await dbConnection();
 
-  switch (req.method) {
-    case "GET":
-      try {
-        const products: IProduct[] = await Product.find();
-        return res.status(200).json(products);
-      } catch (error) {
-        return res.status(500).json({ error: "Error al obtener productos" });
-      }
-
-    case "POST":
-      try {
-        const existing = await Product.findOne({ sku: req.body.sku });
-        if (existing) return res.status(400).json({ error: "SKU duplicado" });
-
-        const newProduct = await Product.create(req.body);
-        return res.status(201).json(newProduct);
-      } catch (error) {
-        return res.status(400).json({ error: "Error al crear producto" });
-      }
-
-    case "PUT":
-      try {
-        const updatedProduct = await Product.findByIdAndUpdate(req.body._id, req.body, { new: true });
-        return res.status(200).json(updatedProduct);
-      } catch (error) {
-        return res.status(400).json({ error: "Error al actualizar producto" });
-      }
-
-    case "DELETE":
+    if (req.method === "GET") {
       try {
         const { id } = req.query;
-        await Product.findByIdAndDelete(id);
-        return res.status(200).json({ message: "Producto eliminado" });
+
+        // Si hay id, busca solo ese producto
+        if (id) {
+          const product = await Products.findById(id as string);
+          if (!product) {
+            return res
+              .status(404)
+              .json({ ok: false, error: "Producto no encontrado" });
+          }
+          return res.status(200).json({ ok: true, data: [product] });
+        }
+
+        // Si no hay id, devuelve todos los productos
+        const products = await Products.find();
+        return res.status(200).json({ ok: true, data: products as Product[] });
       } catch (error) {
-        return res.status(400).json({ error: "Error al eliminar producto" });
+        console.error(error);
+        return res
+          .status(500)
+          .json({ ok: false, error: "Error al obtener productos" });
+      }
+    } else if (req.method === "POST") {
+      try {
+        const {
+          name,
+          brand,
+          quantity,
+          price,
+          isActive,
+          category,
+          imageUrl,
+        } = req.body;
+
+        // Crear el nuevo producto
+        const newProduct = new Products({
+          name,
+          brand,
+          quantity,
+          price,
+          isActive,
+          category,
+          imageUrl,
+        });
+
+        // Guardar en la base de datos
+        const savedProduct = await newProduct.save();
+        const productData: Product = savedProduct.toObject();
+
+        res.status(200).json({ ok: true, data: [productData] });
+      } catch (error) {
+        console.error("❌ Error en POST /api/products:", error);
+        res
+          .status(500)
+          .json({ ok: false, error: "Error interno del servidor" });
+      }
+    } else if (req.method === "PUT") {
+      const { id } = req.query;
+      const {
+        name,
+        brand,
+        quantity,
+        price,
+        isActive,
+        category,
+        imageUrl,
+      } = req.body;
+
+      const updated = await Products.findByIdAndUpdate(
+        id as string,
+        { name, brand, quantity, price, isActive, category, imageUrl },
+        { new: true }
+      );
+
+      if (!updated) {
+        res.status(404).json({ ok: false, error: "No encontrado" });
+        return;
       }
 
-    default:
-      return res.status(405).json({ message: "Método no permitido" });
+      res.status(200).json({ ok: true, data: [updated] });
+      return;
+    } else if (req.method === "DELETE") {
+      const { id } = req.query;
+      const deleted = await Products.findByIdAndDelete(id as string);
+
+      if (!deleted) {
+        res.status(404).json({ ok: false, error: "No encontrado" });
+        return;
+      }
+
+      res.status(200).json({ ok: true, data: [deleted] });
+      return;
+    }
+
+    // Si el método no es permitido
+    return res.status(405).json({ ok: false, error: "Método no permitido" });
+  } catch (err) {
+    console.error(err);
+    res
+      .status(500)
+      .json({ ok: false, error: "Falla en los endpoints de Products" });
   }
 }
