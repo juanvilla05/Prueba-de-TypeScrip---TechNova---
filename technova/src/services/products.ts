@@ -1,7 +1,8 @@
-Despues en la carpeta "api" crea un archivo llamado "products.ts" y va esto import type { NextApiRequest, NextApiResponse } from "next";
+import type { NextApiRequest, NextApiResponse } from "next";
 import { IProduct } from "@/interfaces/product";
 import { Product } from "@/models/Product";
-import { dbConnect } from "@/lib/mongodb";
+import { dbConnect } from "@/lib/db";
+
 
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
